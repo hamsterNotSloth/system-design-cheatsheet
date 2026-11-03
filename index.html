@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>System Design Interview – Cheat Sheet</title>
+<style>
+:root{--ink:#1f2328;--muted:#57606a;--line:#d0d7de;--bg:#f6f8fa}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;color:var(--ink);background:var(--bg)}
+header{background:linear-gradient(135deg,#0969da,#8250df);color:#fff;padding:18px 24px}
+header h1{margin:0 0 8px;font-size:24px}
+.tldr{font-size:15px;margin:3px 0}
+.tldr b{background:rgba(255,255,255,.22);padding:1px 7px;border-radius:5px}
+main{padding:16px 18px 40px;display:grid;grid-template-columns:repeat(auto-fill,minmax(430px,1fr));gap:14px;align-items:start}
+.card{--c:#0969da;background:#fff;border:1px solid var(--line);border-top:5px solid var(--c);border-radius:10px;padding:12px 14px;break-inside:avoid}
+.wide{grid-column:1/-1}
+h2{margin:0 0 8px;font-size:16px;color:var(--c);display:flex;align-items:center;gap:8px}
+h2 .n{flex:none;width:24px;height:24px;border-radius:50%;background:var(--c);color:#fff;font-size:12px;display:grid;place-items:center}
+h3{font-size:12px;margin:10px 0 4px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th{text-align:left;background:#f3f4f6;font-weight:600}
+th,td{padding:4px 7px;border-bottom:1px solid #eaeef2;vertical-align:top}
+td.k{font-weight:600}
+.muted{color:var(--muted);font-size:12.5px;margin:6px 0 0}
+.say{color:var(--muted);font-style:italic}
+code{font:12px ui-monospace,SFMono-Regular,Menlo,monospace;background:#f3f4f6;padding:0 4px;border-radius:4px}
+.timeline{display:flex;border-radius:8px;overflow:hidden;margin:4px 0 10px;font-size:12px;color:#fff;text-align:center}
+.timeline div{padding:8px 4px;border-right:2px solid #fff}
+.timeline div:last-child{border-right:0}
+.timeline b{display:block;font-size:13px}
+.bars .row{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:12.5px}
+.bars .lbl{width:190px;flex:none}
+.bars .track{flex:1;background:#f3f4f6;border-radius:4px}
+.bars .bar{height:16px;border-radius:4px}
+.bars .val{width:64px;flex:none;text-align:right;font-weight:600}
+.pill{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;margin:2px 4px 2px 0;border:1px solid var(--line);background:#f6f8fa}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.box{border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.box.cp{background:#ddf4ff;border-color:#54aeff}
+.box.ap,.box.do{background:#dafbe1;border-color:#4ac26b}
+.box.dont{background:#ffebe9;border-color:#ff8182}
+ul{margin:4px 0;padding-left:18px}
+li{margin:2px 0}
+.tip{background:#fff8c5;border:1px solid #d4a72c;border-radius:6px;padding:6px 9px;font-size:12.5px;margin-top:8px}
+@media print{body{background:#fff}header,.timeline,.bar,h2 .n,.box,.tip{-webkit-print-color-adjust:exact;print-color-adjust:exact}main{display:block}.card{margin-bottom:10px}}
+</style>
+</head>
+<body>
+<header>
+<h1>System Design Interview — 1-Page Cheat Sheet</h1>
+<p class="tldr"><b>TL;DR</b> Clarify → Estimate → API &amp; data → Draw → Deep-dive → Wrap up. Think out loud. Every choice gets a <b>“because…”</b> and a <b>“the trade-off is…”</b></p>
+<p class="tldr"><b>They grade</b> scoping · a design that works · depth on 1–2 hard parts · trade-offs · communication</p>
+</header>
+<main>
+
+<section class="card wide" style="--c:#0969da">
+<h2><span class="n">1</span>The 45-minute game plan</h2>
+<div class="timeline">
+<div style="flex:5;background:#0969da"><b>Requirements</b>5 min</div>
+<div style="flex:5;background:#0e7c86"><b>Estimates</b>5 min</div>
+<div style="flex:5;background:#1a7f37"><b>API &amp; data</b>5 min</div>
+<div style="flex:10;background:#9a6700"><b>High-level design</b>10 min</div>
+<div style="flex:15;background:#bc4c00"><b>Deep dive</b>15 min</div>
+<div style="flex:5;background:#8250df"><b>Wrap up</b>5 min</div>
+</div>
+<table>
+<tr><th>Step</th><th>Do</th><th>Say</th></tr>
+<tr><td class="k">1 · Requirements</td><td>3–5 core features · who uses it · scale (users, QPS) · latency · consistency vs availability · what's out of scope</td><td class="say">“Let me pin down scope before I design.”</td></tr>
+<tr><td class="k">2 · Estimates</td><td>Users → requests/sec (avg &amp; peak) → storage per year → read:write ratio. Only math that changes the design.</td><td class="say">“~12K reads/s, 100:1 read-heavy → caching is key.”</td></tr>
+<tr><td class="k">3 · API &amp; data</td><td>3–5 endpoints · main entities &amp; keys · which DB and why</td><td class="say"><code>POST /v1/urls {longUrl}</code> → <code>{shortCode}</code></td></tr>
+<tr><td class="k">4 · High-level</td><td>Draw the boxes · walk ONE request end to end · make it work before making it scale</td><td class="say">“Here's the simplest version that works.”</td></tr>
+<tr><td class="k">5 · Deep dive</td><td>Pick the 1–2 hardest parts: bottlenecks, hot spots, consistency, failures</td><td class="say">“What breaks first at 10× traffic is ___; I'd fix it with ___.”</td></tr>
+<tr><td class="k">6 · Wrap up</td><td>Recap · failure modes · monitoring · what you'd add next</td><td class="say">“With more time I'd add ___.”</td></tr>
+</table>
+</section>
+
+<section class="card wide" style="--c:#8250df">
+<h2><span class="n">2</span>Default architecture — start here, then adapt</h2>
+<svg viewBox="0 0 960 300" width="100%" style="max-width:1150px;display:block;margin:0 auto" role="img" aria-label="Default architecture diagram">
+<defs>
+<marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#57606a"/></marker>
+<style>
+.t{font:600 13px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;fill:#1f2328;text-anchor:middle}
+.s{font:11px -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;fill:#57606a;text-anchor:middle}
+.ln{fill:none;stroke:#57606a;stroke-width:1.6;marker-end:url(#arr)}
+</style>
+</defs>
+<path class="ln" d="M105,136 L148,56"/>
+<path class="ln" d="M105,145 L148,145"/>
+<path class="ln" d="M270,145 L303,145"/>
+<path class="ln" d="M430,145 L463,145"/>
+<path class="ln" d="M615,145 C640,145 640,31 663,31"/>
+<path class="ln" d="M615,145 C640,145 640,95 663,95"/>
+<path class="ln" d="M615,145 C640,145 640,159 663,159"/>
+<path class="ln" d="M615,145 C640,145 640,223 663,223"/>
+<path class="ln" d="M815,223 L838,223"/>
+<path class="ln" d="M896,200 L896,184"/>
+<rect x="10" y="122" width="95" height="46" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/><text class="t" x="57.5" y="141">Users</text><text class="s" x="57.5" y="157">web · mobile</text>
+<rect x="150" y="22" width="120" height="46" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/><text class="t" x="210" y="41">CDN</text><text class="s" x="210" y="57">static &amp; media</text>
+<rect x="150" y="122" width="120" height="46" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text class="t" x="210" y="141">Load balancer</text><text class="s" x="210" y="157">spreads traffic</text>
+<rect x="305" y="122" width="125" height="46" rx="8" fill="#dafbe1" stroke="#1a7f37" stroke-width="1.5"/><text class="t" x="367.5" y="141">API gateway</text><text class="s" x="367.5" y="157">auth · rate limit</text>
+<rect x="465" y="122" width="150" height="46" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/><text class="t" x="540" y="141">App services</text><text class="s" x="540" y="157">stateless · scale out</text>
+<rect x="665" y="8" width="150" height="46" rx="8" fill="#ffebe9" stroke="#cf222e" stroke-width="1.5"/><text class="t" x="740" y="27">Cache (Redis)</text><text class="s" x="740" y="43">hot reads in memory</text>
+<rect x="665" y="72" width="150" height="46" rx="8" fill="#ddf4ff" stroke="#0969da" stroke-width="1.5"/><text class="t" x="740" y="91">Database</text><text class="s" x="740" y="107">primary + replicas</text>
+<rect x="665" y="136" width="150" height="46" rx="8" fill="#fff1e5" stroke="#bc4c00" stroke-width="1.5"/><text class="t" x="740" y="155">Object store (S3)</text><text class="s" x="740" y="171">images · video · files</text>
+<rect x="665" y="200" width="150" height="46" rx="8" fill="#fff8c5" stroke="#9a6700" stroke-width="1.5"/><text class="t" x="740" y="219">Queue / Kafka</text><text class="s" x="740" y="235">async work · events</text>
+<rect x="840" y="200" width="112" height="46" rx="8" fill="#fbefff" stroke="#8250df" stroke-width="1.5"/><text class="t" x="896" y="219">Workers</text><text class="s" x="896" y="235">jobs · fan-out</text>
+<rect x="840" y="136" width="112" height="46" rx="8" fill="#e0f7f5" stroke="#0e7c86" stroke-width="1.5"/><text class="t" x="896" y="155">Search index</text><text class="s" x="896" y="171">Elasticsearch</text>
+<rect x="10" y="262" width="942" height="30" rx="8" fill="#f6f8fa" stroke="#8c959f" stroke-width="1.2" stroke-dasharray="5 4"/><text class="t" x="481" y="282">Monitoring everywhere: metrics · logs · traces · alerts on p99 latency &amp; error rate</text>
+</svg>
+<div class="tip">Walk ONE request out loud: user → load balancer → service → cache hit? → database → response. Then ask yourself: <b>what breaks first at 10× traffic?</b></div>
+</section>
+
+<section class="card" style="--c:#0e7c86">
+<h2><span class="n">3</span>Napkin math</h2>
+<div class="cols">
+<div><h3>Requests</h3>
+<table><tr><th>Per day</th><th>≈ per second</th></tr>
+<tr><td>1 M</td><td>12</td></tr><tr><td>10 M</td><td>120</td></tr><tr><td>100 M</td><td>1,200</td></tr><tr><td>1 B</td><td>12,000</td></tr></table>
+<p class="muted">1 day ≈ 86,400 s ≈ 10<sup>5</sup> s. Peak ≈ 2–3× average.</p></div>
+<div><h3>Storage</h3>
+<table><tr><th>Size × count</th><th>=</th></tr>
+<tr><td>1 KB × 1 M</td><td>1 GB</td></tr><tr><td>1 KB × 1 B</td><td>1 TB</td></tr><tr><td>1 MB × 1 B</td><td>1 PB</td></tr></table>
+<p class="muted">number/timestamp 8 B · UUID 16 B · post ~1 KB · photo ~200 KB–2 MB · 1 min HD video ~25–50 MB</p></div>
+</div>
+<div class="tip"><b>Example:</b> 100 M daily users × 10 reads = 1 B reads/day ≈ <b>12K reads/s</b> (peak ~30K). 10 M new posts/day × 1 KB = 10 GB/day ≈ <b>3.6 TB/yr</b>. Read-heavy → cache + replicas.</div>
+</section>
+
+<section class="card" style="--c:#cf222e">
+<h2><span class="n">4</span>Speed &amp; uptime numbers</h2>
+<h3>How slow is it? (log scale)</h3>
+<div class="bars">
+<div class="row"><div class="lbl">Memory (RAM) read</div><div class="track"><div class="bar" style="width:14%;background:#2da44e"></div></div><div class="val">100 ns</div></div>
+<div class="row"><div class="lbl">SSD random read</div><div class="track"><div class="bar" style="width:56%;background:#8fbc3b"></div></div><div class="val">~100 µs</div></div>
+<div class="row"><div class="lbl">Round trip, same data center</div><div class="track"><div class="bar" style="width:65%;background:#d4a72c"></div></div><div class="val">0.5 ms</div></div>
+<div class="row"><div class="lbl">Disk (HDD) seek</div><div class="track"><div class="bar" style="width:83%;background:#e16f24"></div></div><div class="val">10 ms</div></div>
+<div class="row"><div class="lbl">Round trip US ↔ Europe</div><div class="track"><div class="bar" style="width:100%;background:#cf222e"></div></div><div class="val">150 ms</div></div>
+</div>
+<p class="muted">Memory ≫ SSD ≫ network ≫ disk ≫ other continent → keep hot data in memory, put data near users (CDN, regions).</p>
+<div class="cols">
+<div><h3>Uptime (“nines”)</h3>
+<table><tr><th>Uptime</th><th>Down / year</th></tr>
+<tr><td>99%</td><td>3.7 days</td></tr><tr><td>99.9%</td><td>8.8 hours</td></tr><tr><td>99.99%</td><td>53 min</td></tr><tr><td>99.999%</td><td>5 min</td></tr></table>
+<p class="muted">Chained services multiply: 99.9% × 99.9% ≈ 99.8%.</p></div>
+<div><h3>One machine ≈ (rough)</h3>
+<table><tr><th>Thing</th><th>Handles</th></tr>
+<tr><td>App server</td><td>1K–10K req/s</td></tr><tr><td>SQL DB node</td><td>~10K queries/s</td></tr><tr><td>Redis</td><td>~100K ops/s</td></tr><tr><td>Kafka broker</td><td>100K–1M msgs/s</td></tr><tr><td>WebSocket server</td><td>~100K connections</td></tr></table></div>
+</div>
+</section>
+
+<section class="card" style="--c:#1a7f37">
+<h2><span class="n">5</span>Building blocks</h2>
+<table>
+<tr><th>Block</th><th>Use it for</th><th>Watch out</th></tr>
+<tr><td class="k">Load balancer</td><td>Spread traffic, health checks. L4 = TCP, L7 = HTTP (route by path)</td><td>Make it redundant; avoid sticky sessions</td></tr>
+<tr><td class="k">API gateway</td><td>Auth, rate limits, routing to services</td><td>Extra hop</td></tr>
+<tr><td class="k">CDN</td><td>Static files, images, video near users</td><td>Invalidation, cost</td></tr>
+<tr><td class="k">Cache (Redis)</td><td>Hot reads, sessions, counters, leaderboards</td><td>Stale data, stampede</td></tr>
+<tr><td class="k">SQL DB</td><td>Transactions, joins, strong consistency</td><td>Write scaling → shard</td></tr>
+<tr><td class="k">NoSQL DB</td><td>Massive scale, access by key</td><td>Design tables around queries; few joins</td></tr>
+<tr><td class="k">Object store (S3)</td><td>Files, images, video, backups</td><td>Keep only URL + metadata in the DB</td></tr>
+<tr><td class="k">Queue (SQS)</td><td>Background jobs, absorb spikes, decouple</td><td>At-least-once → consumers must be idempotent</td></tr>
+<tr><td class="k">Stream (Kafka)</td><td>Event log, many consumers, replay</td><td>Order only within a partition</td></tr>
+<tr><td class="k">Search (Elasticsearch)</td><td>Full-text, fuzzy, filters</td><td>Lags behind the main DB</td></tr>
+<tr><td class="k">Vector DB</td><td>Embeddings, AI similarity search (RAG)</td><td>Approximate results</td></tr>
+<tr><td class="k">ZooKeeper / etcd</td><td>Leader election, config, locks</td><td>Keep it small</td></tr>
+</table>
+</section>
+
+<section class="card" style="--c:#0969da">
+<h2><span class="n">6</span>Pick the database</h2>
+<table>
+<tr><th>If you need…</th><th>Pick</th><th>Examples</th></tr>
+<tr><td>Money, orders, bookings — transactions &amp; joins</td><td class="k">SQL</td><td>Postgres, MySQL</td></tr>
+<tr><td>Lookups by key at huge scale</td><td class="k">Key-value</td><td>DynamoDB, Redis</td></tr>
+<tr><td>Huge write volume, time-ordered (chat, logs, feeds)</td><td class="k">Wide-column</td><td>Cassandra, ScyllaDB</td></tr>
+<tr><td>Flexible JSON documents</td><td class="k">Document</td><td>MongoDB, Firestore</td></tr>
+<tr><td>Friends-of-friends, many hops</td><td class="k">Graph</td><td>Neo4j</td></tr>
+<tr><td>Full-text search</td><td class="k">Search engine</td><td>Elasticsearch, OpenSearch</td></tr>
+<tr><td>Analytics over billions of rows</td><td class="k">Columnar (OLAP)</td><td>ClickHouse, BigQuery, Snowflake</td></tr>
+<tr><td>Metrics over time</td><td class="k">Time-series</td><td>Prometheus, InfluxDB</td></tr>
+<tr><td>Files &amp; media</td><td class="k">Object store</td><td>S3, GCS, Azure Blob</td></tr>
+</table>
+<div class="tip">Default to <b>Postgres</b>. Switch only when you can name the reason: scale, access pattern, or schema.</div>
+</section>
+
+<section class="card" style="--c:#bc4c00">
+<h2><span class="n">7</span>Scaling toolkit — problem → fix</h2>
+<table>
+<tr><th>Problem</th><th>Fix</th></tr>
+<tr><td class="k">One server can't keep up</td><td>Stateless app servers + load balancer → add more (scale out)</td></tr>
+<tr><td class="k">Too many DB reads</td><td>Cache · read replicas · CDN</td></tr>
+<tr><td class="k">Too many writes / too much data</td><td>Shard by key · batch writes · buffer through a queue</td></tr>
+<tr><td class="k">Slow work inside a request</td><td>Go async: queue + workers, return <code>202 Accepted</code></td></tr>
+<tr><td class="k">Traffic spikes</td><td>Queue as buffer · autoscaling · rate limiting · back-pressure</td></tr>
+<tr><td class="k">One super-hot key (celebrity)</td><td>Replicate it · local in-memory cache · split into <code>key#1…key#N</code></td></tr>
+<tr><td class="k">Big uploads</td><td>Pre-signed URL → client uploads straight to S3, in chunks (resumable)</td></tr>
+<tr><td class="k">Far-away users are slow</td><td>CDN · edge caching · multi-region</td></tr>
+<tr><td class="k">Single point of failure</td><td>Replicas · multiple zones · automatic failover</td></tr>
+<tr><td class="k">Expensive queries</td><td>Indexes · denormalize · precompute results</td></tr>
+</table>
+</section>
+
+<section class="card" style="--c:#cf222e">
+<h2><span class="n">8</span>Caching</h2>
+<table>
+<tr><th>Pattern</th><th>How it works</th><th>Use when</th></tr>
+<tr><td class="k">Cache-aside ⭐</td><td>Check cache → miss → read DB → save in cache</td><td>Default</td></tr>
+<tr><td class="k">Write-through</td><td>Write cache + DB together</td><td>Reads must be fresh</td></tr>
+<tr><td class="k">Write-behind</td><td>Write cache now, DB later in batches</td><td>Write-heavy; can lose data</td></tr>
+<tr><td class="k">Read-through</td><td>Cache loads from DB itself on a miss</td><td>Managed caches</td></tr>
+</table>
+<h3>Eviction</h3>
+<span class="pill">LRU (default)</span><span class="pill">LFU</span><span class="pill">TTL expiry</span>
+<h3>Problems → fixes</h3>
+<table>
+<tr><td class="k">Stale data</td><td>TTL + delete the key on every write</td></tr>
+<tr><td class="k">Stampede (hot key expires, everyone hits the DB)</td><td>Lock so one request refills · random TTL jitter · refresh early</td></tr>
+<tr><td class="k">Hot key</td><td>Replicate · local in-process cache</td></tr>
+<tr><td class="k">Lookups for keys that don't exist</td><td>Cache “not found” · Bloom filter</td></tr>
+</table>
+<p class="muted">Cache layers: browser → CDN → gateway → app memory → Redis → DB.</p>
+</section>
+
+<section class="card" style="--c:#0e7c86">
+<h2><span class="n">9</span>Sharding &amp; replication</h2>
+<h3>Sharding = split data across machines</h3>
+<table>
+<tr><th>Strategy</th><th>+</th><th>−</th></tr>
+<tr><td class="k">Hash of key</td><td>Even spread</td><td>Resharding moves data → use consistent hashing</td></tr>
+<tr><td class="k">Range (date, A–M)</td><td>Fast range scans</td><td>Hot spots (e.g., today's data)</td></tr>
+<tr><td class="k">Lookup table</td><td>Flexible</td><td>Extra service to depend on</td></tr>
+<tr><td class="k">Geography</td><td>Data near users, legal rules</td><td>Uneven load</td></tr>
+</table>
+<p class="muted"><b>Good shard key:</b> many distinct values, spreads evenly, matches your main query (<code>user_id</code>, <code>chat_id</code>). Cross-shard joins hurt.</p>
+<p class="muted"><b>Consistent hashing:</b> servers + keys on a ring (with virtual nodes); adding a server moves only ~1/N of the keys.</p>
+<h3>Replication = keep copies</h3>
+<table>
+<tr><th>Type</th><th>+</th><th>−</th></tr>
+<tr><td class="k">Leader → followers</td><td>Simple, scales reads</td><td>Replica lag; needs failover</td></tr>
+<tr><td class="k">Multi-leader</td><td>Writes in many regions</td><td>Write conflicts</td></tr>
+<tr><td class="k">Leaderless (quorum)</td><td>Survives node failures</td><td>Conflict resolution</td></tr>
+</table>
+<p class="muted"><b>Quorum:</b> N copies, write to W, read from R. <b>R + W &gt; N</b> → reads see the latest write. Read-your-own-writes: send a user's reads to the leader right after they write.</p>
+</section>
+
+<section class="card" style="--c:#8250df">
+<h2><span class="n">10</span>Consistency &amp; CAP</h2>
+<p style="margin:0 0 8px;font-size:13px"><b>CAP:</b> when the network splits, choose — answer correctly or not at all (<b>C</b>), or always answer, maybe stale (<b>A</b>).</p>
+<div class="cols">
+<div class="box cp"><b>Pick Consistency (CP)</b><ul><li>Payments, bank balances</li><li>Inventory, seat booking</li><li>Leader election, locks</li></ul><span class="muted">Spanner, etcd, ZooKeeper, SQL primary</span></div>
+<div class="box ap"><b>Pick Availability (AP)</b><ul><li>Likes, views, follower counts</li><li>Feeds, timelines</li><li>Shopping cart, presence</li></ul><span class="muted">Cassandra, DynamoDB (default)</span></div>
+</div>
+<p class="muted"><b>PACELC:</b> even with no split, you trade <b>latency vs consistency</b>.</p>
+<h3>Levels (strong → weak)</h3>
+<span class="pill">Strong</span>→ <span class="pill">Read-your-writes</span>→ <span class="pill">Causal</span>→ <span class="pill">Eventual</span>
+<h3>Transactions</h3>
+<p class="muted" style="margin-top:0">One DB → ACID transaction. Across services → <b>Saga</b> (steps + undo steps). Avoid two-phase commit unless forced.</p>
+<div class="tip">Say: “Like counts can be eventually consistent; payments must be strongly consistent.”</div>
+</section>
+
+<section class="card" style="--c:#9a6700">
+<h2><span class="n">11</span>APIs &amp; real-time</h2>
+<table>
+<tr><th>Option</th><th>Use for</th></tr>
+<tr><td class="k">REST (HTTP + JSON)</td><td>Default public API</td></tr>
+<tr><td class="k">gRPC</td><td>Fast internal service-to-service calls</td></tr>
+<tr><td class="k">GraphQL</td><td>Client picks exact fields; many front-ends</td></tr>
+<tr><td class="k">WebSocket</td><td>Two-way live: chat, games, collaborative editing</td></tr>
+<tr><td class="k">SSE (server-sent events)</td><td>One-way push: notifications, live scores, AI token streaming</td></tr>
+<tr><td class="k">Long polling</td><td>Simple fallback for “live” updates</td></tr>
+<tr><td class="k">Webhooks</td><td>Server-to-server callbacks (e.g., payment done)</td></tr>
+</table>
+<p class="muted"><b>API hygiene:</b> cursor pagination (not offset) · version (<code>/v1</code>) · idempotency key on POST · auth token · <code>429</code> when rate-limited.</p>
+</section>
+
+<section class="card" style="--c:#1a7f37">
+<h2><span class="n">12</span>Reliability patterns</h2>
+<table>
+<tr><th>Pattern</th><th>In plain words</th></tr>
+<tr><td class="k">Timeouts</td><td>Never wait forever</td></tr>
+<tr><td class="k">Retries + backoff + jitter</td><td>Retry blips, spread out so you don't stampede</td></tr>
+<tr><td class="k">Idempotency key</td><td>Doing it twice = doing it once (payments!)</td></tr>
+<tr><td class="k">Circuit breaker</td><td>Stop calling a service that keeps failing</td></tr>
+<tr><td class="k">Dead-letter queue</td><td>Park messages that keep failing, inspect later</td></tr>
+<tr><td class="k">Bulkheads</td><td>Separate pools so one failure doesn't sink everything</td></tr>
+<tr><td class="k">Graceful degradation</td><td>Serve less (hide recommendations) instead of erroring</td></tr>
+<tr><td class="k">Outbox pattern</td><td>Save DB row + event in one transaction, publish after</td></tr>
+<tr><td class="k">Health checks + failover</td><td>Replace dead nodes automatically</td></tr>
+</table>
+<p class="muted"><b>Delivery:</b> at-most-once · at-least-once (+ idempotent consumer ≈ exactly-once) · true exactly-once is hard.</p>
+<p class="muted"><b>Disaster recovery:</b> RPO = how much data you can lose · RTO = how long until you're back.</p>
+</section>
+
+<section class="card" style="--c:#bf3989">
+<h2><span class="n">13</span>Rate limiting &amp; unique IDs</h2>
+<table>
+<tr><th>Rate-limit algorithm</th><th>Note</th></tr>
+<tr><td class="k">Token bucket ⭐</td><td>Allows short bursts; most common</td></tr>
+<tr><td class="k">Leaky bucket</td><td>Smooth, constant output rate</td></tr>
+<tr><td class="k">Fixed window</td><td>Simple; up to 2× burst at window edges</td></tr>
+<tr><td class="k">Sliding window log</td><td>Exact; memory-heavy</td></tr>
+<tr><td class="k">Sliding window counter</td><td>Good balance of both</td></tr>
+</table>
+<p class="muted">Counters in Redis (atomic <code>INCR</code> + <code>EXPIRE</code>, or a Lua script), keyed by user / IP / API key → reply <code>429</code> + <code>Retry-After</code>.</p>
+<table style="margin-top:8px">
+<tr><th>ID option</th><th>+</th><th>−</th></tr>
+<tr><td class="k">DB auto-increment</td><td>Simple, ordered</td><td>One bottleneck; guessable</td></tr>
+<tr><td class="k">UUID v4</td><td>No coordination</td><td>Random → slow indexes</td></tr>
+<tr><td class="k">Snowflake (64-bit)</td><td>Sorted by time, distributed</td><td>Clock skew</td></tr>
+<tr><td class="k">UUID v7 / ULID</td><td>Time-sortable UUID</td><td>128-bit</td></tr>
+</table>
+<p class="muted">Snowflake = 41 bits time (ms) + 10 bits machine + 12 bits sequence (~4K IDs/ms per machine). Base62 × 7 chars ≈ 3.5 trillion short codes.</p>
+</section>
+
+<section class="card wide" style="--c:#0969da">
+<h2><span class="n">14</span>Classic questions — the key idea</h2>
+<table>
+<tr><th>Question</th><th>Core design</th><th>Bring up in the deep dive</th></tr>
+<tr><td class="k">URL shortener</td><td>Unique ID (counter / Snowflake) → base62, 7 chars ≈ 3.5T codes · key-value store code → URL · cache heavily</td><td>100:1 reads · 301 (browser caches) vs 302 (track every click) · custom alias · expiry · click analytics async via Kafka</td></tr>
+<tr><td class="k">Rate limiter</td><td>Token bucket per user/IP in Redis, enforced at the API gateway</td><td>Atomic ops (Lua) · 429 + Retry-After · fail-open vs fail-closed · multi-region counts</td></tr>
+<tr><td class="k">News feed (Twitter / Instagram)</td><td>Fan-out on write: on post, push the post ID into each follower's feed list (Redis). Celebrities: fan-out on read. → Hybrid</td><td>Celebrity problem · feed = list of IDs, hydrate from cache · ranking · media via S3 + CDN · cursor pagination</td></tr>
+<tr><td class="k">Chat (WhatsApp / Slack)</td><td>WebSocket to chat servers · registry user → server (Redis) · messages in Cassandra keyed by chat_id + time</td><td>Ordering (per-chat sequence numbers) · offline → push notification · sent/delivered/read receipts · presence via heartbeats · group fan-out</td></tr>
+<tr><td class="k">Notification system</td><td>API → queue per channel (push / SMS / email) → workers → APNs, FCM, Twilio, SES</td><td>User preferences · templates · dedupe (idempotency) · retries + DLQ · per-user rate limits · priorities</td></tr>
+<tr><td class="k">Video (YouTube / Netflix)</td><td>Upload to S3 via pre-signed URL → queue → transcode workers (many resolutions) → adaptive streaming (HLS/DASH) from CDN</td><td>Resumable chunked uploads · metadata in SQL · view counts async · popular videos cached at the edge</td></tr>
+<tr><td class="k">File sync (Dropbox / Drive)</td><td>Split files into ~4 MB chunks, hash each, upload only changed chunks · metadata DB · notify other devices</td><td>Dedupe by hash · conflicts → keep versions · resumable uploads</td></tr>
+<tr><td class="k">Ride-sharing (Uber)</td><td>Drivers send GPS every few seconds → in-memory geo index (geohash / quadtree / Redis GEO) → match nearby</td><td>Very high write rate (don't write each ping to SQL) · lock a driver while offering a ride · ETA · surge pricing</td></tr>
+<tr><td class="k">Nearby places (Yelp)</td><td>Geohash or quadtree index · read-heavy → cache</td><td>Also search neighboring cells · reviews in SQL</td></tr>
+<tr><td class="k">Ticket booking (Ticketmaster)</td><td>Hold the seat with a timeout (status = held + expires_at, or Redis lock with TTL) → pay → confirm</td><td>No double-booking: transactions / optimistic locking · virtual waiting room for hot events</td></tr>
+<tr><td class="k">Payments</td><td>Idempotency keys · double-entry ledger in SQL · payment provider + webhooks</td><td>Strong consistency · reconciliation job · audit trail · safe retries</td></tr>
+<tr><td class="k">Typeahead / autocomplete</td><td>Prefix → top-K suggestions, precomputed (trie or Redis) · rebuilt offline from search logs</td><td>&lt;100 ms · client debounce · cache in browser/CDN · trending updates</td></tr>
+<tr><td class="k">Web crawler</td><td>URL frontier (priority queues) → fetchers → parse → store in S3 · Bloom filter to skip seen URLs</td><td>Politeness per domain · robots.txt · DNS cache · content dedupe (hash) · crawler traps</td></tr>
+<tr><td class="k">Leaderboard</td><td>Redis sorted set (add score, top-N, my rank)</td><td>Shard huge boards · ties · periodic snapshots</td></tr>
+<tr><td class="k">Top-K / trending</td><td>Stream (Kafka → Flink) with time windows · count-min sketch + heap (approximate)</td><td>Approximate fast path + exact batch (Spark) later</td></tr>
+<tr><td class="k">Key-value store / distributed cache</td><td>Consistent hashing + replication + quorum (R + W &gt; N)</td><td>Gossip membership · hinted handoff · conflicts (last-write-wins / vector clocks)</td></tr>
+<tr><td class="k">Collaborative docs (Google Docs)</td><td>WebSocket to a doc server · merge edits with OT or CRDTs</td><td>Cursors / presence · version history · offline edits</td></tr>
+<tr><td class="k">Job scheduler / cron</td><td>Jobs table indexed by next_run_time → scheduler picks due jobs → queue → workers</td><td>Leases / visibility timeout · idempotent jobs · retries</td></tr>
+<tr><td class="k">Metrics &amp; logging</td><td>Agents → Kafka → stream processing → time-series DB / OLAP</td><td>Write-heavy · downsampling · hot/cold retention · alerting</td></tr>
+<tr><td class="k">AI chat app (ChatGPT-like)</td><td>API → queue → GPU model servers (batching) · stream tokens via SSE · chats stored by conversation_id</td><td>GPU cost is the bottleneck · token-based rate limits · long requests/timeouts · RAG with a vector DB</td></tr>
+</table>
+</section>
+
+<section class="card" style="--c:#8250df">
+<h2><span class="n">15</span>Trade-offs to say out loud</h2>
+<table>
+<tr><th>Choice</th><th>Pick the first when…</th><th>Pick the second when…</th></tr>
+<tr><td class="k">SQL vs NoSQL</td><td>Transactions, joins</td><td>Huge scale, simple key access</td></tr>
+<tr><td class="k">Strong vs eventual</td><td>Money, inventory</td><td>Likes, feeds, counts</td></tr>
+<tr><td class="k">Push vs pull feed</td><td>Normal users, fast reads</td><td>Celebrities (too many followers)</td></tr>
+<tr><td class="k">Sync vs async</td><td>User needs the answer now</td><td>Heavy work, spikes</td></tr>
+<tr><td class="k">Normalize vs denormalize</td><td>Write-heavy, data integrity</td><td>Read-heavy, avoid joins</td></tr>
+<tr><td class="k">Cache vs no cache</td><td>Read-heavy, slight staleness OK</td><td>Must be exact &amp; fresh</td></tr>
+<tr><td class="k">Polling vs WebSocket</td><td>Rare updates, simple</td><td>Real-time updates</td></tr>
+<tr><td class="k">Batch vs stream</td><td>Daily reports, cheaper</td><td>Results in seconds</td></tr>
+<tr><td class="k">Monolith vs microservices</td><td>Small team, early stage</td><td>Independent scaling &amp; deploys</td></tr>
+</table>
+</section>
+
+<section class="card" style="--c:#1a7f37">
+<h2><span class="n">16</span>Do / Don't</h2>
+<div class="cols">
+<div class="box do"><b>✅ Do</b><ul>
+<li>Ask questions before drawing</li>
+<li>Say numbers &amp; assumptions out loud</li>
+<li>Start simple, then scale it</li>
+<li>Name the bottleneck &amp; single point of failure yourself</li>
+<li>Give a trade-off for every choice</li>
+<li>Mention monitoring &amp; security (auth, encryption)</li>
+<li>Ask: “Which part should I go deeper on?”</li>
+</ul></div>
+<div class="box dont"><b>❌ Don't</b><ul>
+<li>Jump into boxes before requirements</li>
+<li>Name-drop tech without “because…”</li>
+<li>Over-engineer (Kafka + 20 microservices for 1K users)</li>
+<li>Go silent — think out loud</li>
+<li>Spend &gt;10 min on requirements &amp; math</li>
+<li>Defend a bad choice after a hint — adjust</li>
+</ul></div>
+</div>
+<div class="tip"><b>Stuck?</b> Go back to the numbers → find the bottleneck → grab a fix from card 7.</div>
+</section>
+
+<section class="card" style="--c:#9a6700">
+<h2><span class="n">17</span>Plain-word glossary</h2>
+<table>
+<tr><td class="k">QPS</td><td>Requests per second</td></tr>
+<tr><td class="k">p99 latency</td><td>99% of requests are faster than this</td></tr>
+<tr><td class="k">Stateless</td><td>Server keeps no user data → any server can take any request</td></tr>
+<tr><td class="k">Shard</td><td>One slice of the data on its own machine</td></tr>
+<tr><td class="k">Replica</td><td>A copy of the data</td></tr>
+<tr><td class="k">Fan-out</td><td>Copying one thing to many places (a post → every follower's feed)</td></tr>
+<tr><td class="k">Idempotent</td><td>Doing it twice has the same effect as once</td></tr>
+<tr><td class="k">Hot key</td><td>One item everyone hits at the same time</td></tr>
+<tr><td class="k">Back-pressure</td><td>Telling senders to slow down</td></tr>
+<tr><td class="k">Eventual consistency</td><td>Copies agree after a short delay</td></tr>
+<tr><td class="k">Quorum</td><td>Enough copies agree (e.g., 2 of 3)</td></tr>
+<tr><td class="k">Bloom filter</td><td>Tiny structure: “definitely not seen” or “maybe seen”</td></tr>
+</table>
+</section>
+
+</main>
+</body>
+</html>
